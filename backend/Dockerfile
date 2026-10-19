@@ -22,4 +22,5 @@ ENV PYTHONUNBUFFERED=1 \
 EXPOSE 8000
 
 # Render (and similar hosts) inject $PORT; fall back to 8000 locally.
-CMD ["sh", "-c", "uvicorn backend.app.main:app --host 0.0.0.0 --port ${PORT:-8000}"]
+# Run from /app/backend so the app's own `from app...` imports resolve.
+CMD ["sh", "-c", "cd /app/backend && exec uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000}"]
