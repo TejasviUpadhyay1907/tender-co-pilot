@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tender Co-Pilot</title>
+<meta name="description" content="MSME tender co-pilot: discover public tenders, check eligibility, track deadlines.">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<header class="topbar">
+  <div class="brand">
+    <span class="brand-mark" aria-hidden="true">◈</span>
+    <span class="brand-text">
+      <strong>Tender Co-Pilot</strong>
+      <small>MSME tender discovery &amp; bid assistant</small>
+    </span>
+  </div>
+  <div id="health" class="health" title="Backend API status"><span class="dot"></span><span class="health-text">checking…</span></div>
+</header>
+
+<nav class="tabs" id="nav" aria-label="Primary">
+  <button type="button" data-view="dashboard">Dashboard</button>
+  <button type="button" data-view="tenders">Tenders</button>
+  <button type="button" data-view="profiles">Profiles</button>
+  <button type="button" data-view="run">Run</button>
+  <button type="button" data-view="deadlines">Deadlines</button>
+  <button type="button" data-view="ingest">Ingest</button>
+</nav>
+
+<main id="view" class="view" aria-live="polite"></main>
+
+<footer class="footer">
+  <p>Data shown comes from the backend database — seeded sample data or ingested public portal listings.
+  Always verify figures against the official tender document before bidding.</p>
+</footer>
+
+<script src="app.js"></script>
+</body>
+</html>

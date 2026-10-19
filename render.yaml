@@ -1,0 +1,30 @@
+# Render Blueprint for Tender Co-Pilot.
+# Deploy: push this repo to GitHub, then in Render → New → Blueprint → select the repo.
+# Docs: https://render.com/docs/blueprint-spec
+services:
+  - type: web
+    name: tender-co-pilot
+    runtime: docker
+    dockerfilePath: backend/Dockerfile
+    dockerContext: .
+    # Paid plan = always-on + persistent disk (free services sleep and lose local data).
+    # Adjust on the Render dashboard if needed.
+    plan: starter
+    disk:
+      name: tender-data
+      mountPath: /app/data
+      sizeGB: 10
+    healthCheckPath: /
+    envVars:
+      - key: PYTHONUNBUFFERED
+        value: 1
+      - key: LLM_API_KEY
+        sync: false # set on the Render dashboard; empty = deterministic fallback mode
+      - key: LLM_BASE_URL
+        value: https://api.openai.com/v1
+      - key: LLM_MODEL
+        value: gpt-4o-mini
+      - key: INGEST_INTERVAL_HOURS
+        value: 6
+      - key: SCAN_KEYWORDS
+        value: works,supply,services

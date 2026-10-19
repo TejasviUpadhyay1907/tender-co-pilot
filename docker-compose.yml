@@ -1,0 +1,37 @@
+# Tender Co-Pilot — local deployment.
+# Build and run the FastAPI backend (which also serves the SPA at /).
+# Usage: cp .env.example .env   # then fill in values, then: docker compose up --build
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    ports:
+      - "8000:8000"
+    env_file:
+      - .env
+    volumes:
+      # SQLite DB + ChromaDB + uploads live here (persists across restarts)
+      - ./data:/app/data
+      # Seed tender data, read-only inside the container
+      - ./seed:/app/seed:ro
+    restart: unless-stopped
+
+  # --- Alternative: Postgres instead of SQLite ---
+  # 1. Uncomment the db service and the volume below.
+  # 2. In .env set: DATABASE_URL=postgresql://tender:tender@db:5432/tendercopilot
+  # 3. Rebuild: docker compose up --build
+  #
+  # db:
+  #   image: postgres:16
+  #   environment:
+  #     POSTGRES_USER: tender
+  #     POSTGRES_PASSWORD: tender        # change me; better via .env
+  #     POSTGRES_DB: tendercopilot
+  #   volumes:
+  #     - pgdata:/var/lib/postgresql/data
+  #   restart: unless-stopped
+  #
+  # volumes:
+  #   pgdata:

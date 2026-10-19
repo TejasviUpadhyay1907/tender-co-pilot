@@ -1,0 +1,17 @@
+# Tender Co-Pilot backend dependencies.
+# Requires python>=3.11. Nothing is version-pinned; install fresh per deploy.
+fastapi
+uvicorn[standard]
+sqlalchemy
+pydantic
+pydantic-settings
+httpx
+requests
+beautifulsoup4
+lxml
+pypdf
+chromadb
+sentence-transformers
+apscheduler
+pytest
+python-multipart
