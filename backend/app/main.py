@@ -28,6 +28,38 @@ def _seed_if_present(db) -> None:
         log.info("Auto-seed complete: %s", result)
     except Exception:
         log.exception("Auto-seed failed")
+    _seed_default_profile(db)
+
+
+def _seed_default_profile(db) -> None:
+    """Create one demo company profile if none exists, so the pipeline
+    (which requires a profile) works out of the box on a fresh deploy."""
+    from app.db import CompanyProfile
+
+    try:
+        if db.query(CompanyProfile).count() > 0:
+            return
+        db.add(
+            CompanyProfile(
+                name="Demo Roads MSME",
+                sector="roads",
+                registration_type="MSME",
+                udyam_registered=True,
+                dpiit_startup=False,
+                turnover_avg_3y=80000000,
+                local_content_pct=60,
+                certifications_json=["GST", "PAN"],
+                experience_json=[
+                    {"type": "road maintenance", "value": 45000000, "year": 2025}
+                ],
+                notes="Demo profile seeded for first-run preview",
+            )
+        )
+        db.commit()
+        log.info("Seeded default company profile")
+    except Exception:
+        db.rollback()
+        log.exception("Default profile seed failed")
 
 
 @asynccontextmanager

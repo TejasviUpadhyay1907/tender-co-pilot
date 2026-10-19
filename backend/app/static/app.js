@@ -130,7 +130,10 @@ async function api(path, opts) {
   if (!res.ok) {
     const msg = (data && (data.detail || data.error || data.message)) ||
       ('Request failed (HTTP ' + res.status + ')');
-    throw new Error(Array.isArray(msg) ? msg.join('; ') : msg);
+    const msgText = Array.isArray(msg)
+      ? msg.map((m) => (m && typeof m === 'object' ? (m.msg || JSON.stringify(m)) : String(m))).join('; ')
+      : msg;
+    throw new Error(msgText);
   }
   return data;
 }
