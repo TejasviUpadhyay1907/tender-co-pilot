@@ -51,8 +51,28 @@ if DB_URL.startswith("sqlite:///"):
         if parent:
             os.makedirs(parent, exist_ok=True)
 
-_engine_kwargs = {"connect_args": {"check_same_thread": False}} if DB_URL.startswith("sqlite") else {}
+_engine_kwargs = (
+    {"connect_args": {"check_same_thread": False, "timeout": 30}}
+    if DB_URL.startswith("sqlite")
+    else {}
+)
 engine = create_engine(DB_URL, **_engine_kwargs)
+
+if DB_URL.startswith("sqlite"):
+    from sqlalchemy import event
+
+    @event.listens_for(engine, "connect")
+    def _sqlite_pragmas(dbapi_connection, _connection_record):
+        """WAL journaling + a hard busy timeout: readers never queue
+        behind a writer, and a stuck write lock surfaces as an error
+        in 30s instead of hanging the request forever."""
+        cursor = dbapi_connection.cursor()
+        try:
+            cursor.execute("PRAGMA journal_mode=WAL")
+            cursor.execute("PRAGMA busy_timeout=30000")
+            cursor.execute("PRAGMA synchronous=NORMAL")
+        finally:
+            cursor.close()
 SessionLocal = sessionmaker(bind=engine, autoflush=False, autocommit=False)
 
 

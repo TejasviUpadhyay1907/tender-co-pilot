@@ -230,23 +230,31 @@ def search_tenders(keyword: str = "", max_results: int = 50) -> list[dict]:
     """
     session = _session()
     failures: list[str] = []
-    for url in CANDIDATE_SEARCH_URLS:
-        try:
-            resp = _polite_get(
-                session, url, params={"keyword": keyword} if keyword else None
-            )
-        except Exception as exc:
-            failures.append(f"{url}: request failed ({exc})")
-            continue
-        try:
-            rows = _parse_search_table(resp.text, base_url=url)
-        except Exception as exc:
-            failures.append(f"{url}: parse error ({exc})")
-            continue
-        if rows:
-            log.info("CPPP search %r: %d rows via %s", keyword, len(rows), url)
-            return rows[:max_results]
-        failures.append(f"{url}: no tender rows parsed")
+    # The portal (and the path to it) is intermittently slow or refuses
+    # connections in spells; one full retry pass after a pause rescues
+    # most transient failures.
+    for attempt in range(2):
+        if attempt:
+            import time
+
+            time.sleep(20)
+        for url in CANDIDATE_SEARCH_URLS:
+            try:
+                resp = _polite_get(
+                    session, url, params={"keyword": keyword} if keyword else None
+                )
+            except Exception as exc:
+                failures.append(f"{url}: request failed ({exc})")
+                continue
+            try:
+                rows = _parse_search_table(resp.text, base_url=url)
+            except Exception as exc:
+                failures.append(f"{url}: parse error ({exc})")
+                continue
+            if rows:
+                log.info("CPPP search %r: %d rows via %s", keyword, len(rows), url)
+                return rows[:max_results]
+            failures.append(f"{url}: no tender rows parsed")
     raise IngestError(
         "CPPP search page structure changed or requires JS session; "
         "no tender rows could be parsed from any known endpoint "
