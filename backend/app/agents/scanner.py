@@ -13,6 +13,7 @@ before insert so portal navigation text can never become a tender row.
 from __future__ import annotations
 
 import re
+from datetime import date, datetime
 
 from ._common import to_datetime
 from .base import Agent, AgentContext
@@ -114,6 +115,10 @@ class ScannerAgent(Agent):
                 if (title.lower(), org.lower()) in existing_title_org:
                     continue
                 try:
+                    raw = {
+                        k: (v.isoformat() if isinstance(v, (datetime, date)) else v)
+                        for k, v in r.items()
+                    }
                     row = Tender(
                         tender_id_external=ext,
                         title=title,
@@ -131,7 +136,7 @@ class ScannerAgent(Agent):
                         bid_validity_days=r.get("bid_validity_days"),
                         source=r.get("source") or "cppp",
                         source_url=r.get("source_url"),
-                        raw_json=dict(r),
+                        raw_json=raw,
                     )
                     ctx.db.add(row)
                     ctx.db.flush()

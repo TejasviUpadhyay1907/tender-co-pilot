@@ -43,6 +43,9 @@ SOURCE_NAME = "CPPP eprocure.gov.in"
 # If the portal has moved or gone JS-only, every candidate fails validation
 # and search_tenders() raises IngestError instead of returning made-up data.
 CANDIDATE_SEARCH_URLS = [
+    # Verified live 2026-10-20: returns a real tender table with
+    # Title/Ref.No./Tender Id, Organisation, Published and Closing dates.
+    "https://eprocure.gov.in/cppp/latestactivetendersnew",
     "https://eprocure.gov.in/cppp/tenders_search",
     "https://eprocure.gov.in/eprocure/app?page=FrontEndTendersByOrganisation&service=page",
 ]
@@ -115,6 +118,7 @@ def _parse_money(text: str) -> Optional[float]:
 
 def _parse_dt(text: str) -> Optional[datetime]:
     for fmt in (
+        "%d-%b-%Y %I:%M %p",  # portal format e.g. 20-Oct-2026 11:00 AM
         "%d-%b-%Y %H:%M",
         "%d-%b-%Y",
         "%d/%m/%Y %H:%M",
@@ -153,7 +157,7 @@ def _parse_search_table(html: str, base_url: str) -> list[dict]:
                     return i
             return None
 
-        c_title = col("title", "work", "tender")
+        c_title = col("title") or col("work") or col("tender")
         c_org = col("organisation", "organization", "department", "ministry")
         c_ref = col("ref", "tender id", "tender no")
         c_emd = col("emd")
