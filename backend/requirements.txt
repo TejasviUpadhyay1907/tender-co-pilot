@@ -12,6 +12,7 @@ lxml
 pypdf
 chromadb
 sentence-transformers
+scikit-learn
 apscheduler
 pytest
 python-multipart

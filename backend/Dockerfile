@@ -11,7 +11,13 @@ RUN apt-get update \
 WORKDIR /app
 
 COPY backend/requirements.txt backend/requirements.txt
-RUN pip install --no-cache-dir -r backend/requirements.txt
+# Slim production install: chromadb and sentence-transformers (which pulls
+# in torch) are optional heavy deps — the app has built-in fallbacks for
+# both (in-memory vector store, TF-IDF embeddings via scikit-learn) and
+# together they OOM small instances (512MB free tier) on the first
+# pipeline run. pytest is dev-only.
+RUN grep -v -E "^(chromadb|sentence-transformers|pytest)$" backend/requirements.txt > /tmp/requirements-prod.txt \
+    && pip install --no-cache-dir -r /tmp/requirements-prod.txt
 
 # Copy the whole repo (app, seed/, frontend build output, etc.)
 COPY . /app
