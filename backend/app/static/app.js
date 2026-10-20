@@ -68,6 +68,22 @@ function verdictClass(v) {
   return 'unknown';
 }
 
+function liftRun(r) {
+  // Run objects from the API nest their outcome in result_json
+  // ({verdict, match_score, ...}) and steps in steps_json. Lift those
+  // fields to the top level so every view renders them directly.
+  if (!r || typeof r !== 'object') return r;
+  const res = (r.result_json && typeof r.result_json === 'object') ? r.result_json : {};
+  if (r.verdict == null && res.verdict != null) r.verdict = res.verdict;
+  if (r.match_score == null && res.match_score != null) r.match_score = res.match_score;
+  if (!Array.isArray(r.steps)) {
+    if (Array.isArray(r.steps_json)) r.steps = r.steps_json;
+    else if (Array.isArray(res.steps)) r.steps = res.steps;
+  }
+  if (r.summary == null && Object.keys(res).length) r.summary = res;
+  return r;
+}
+
 function verdictBadge(v) {
   const label = dash(v) === '—' ? 'NOT RUN' : String(v).toUpperCase();
   return '<span class="badge ' + verdictClass(v) + '">' + esc(label) + '</span>';
@@ -208,7 +224,7 @@ async function renderDashboard(el) {
     const t = new Date(d.due_at).getTime();
     return !Number.isNaN(t) && t >= Date.now();
   });
-  const lastRun = runs[0] || null;
+  const lastRun = runs[0] ? liftRun(runs[0]) : null;
 
   let html = '';
   if (errors.length) html += errorBox('Some dashboard data could not load: ' + errors.join('; '));
@@ -466,7 +482,7 @@ async function renderTenderDetail(el, id) {
     runBtn.disabled = true;
     note.innerHTML = '<span class="spinner"></span>Running pipeline…';
     try {
-      const r = await post('/runs', { profile_id: pid, tender_id: t.id });
+      const r = liftRun(await post('/runs', { profile_id: pid, tender_id: t.id }));
       note.innerHTML = 'Run finished: ' + verdictBadge(r.verdict) + ' score ' +
         esc(r.match_score != null ? Math.round(normScore(r.match_score)) : '—');
       setTimeout(() => navigate('#/tender/' + encodeURIComponent(t.id)), 1200);
@@ -783,7 +799,7 @@ async function renderRun(el) {
     prog.innerHTML = '<span class="spinner"></span>Pipeline running — this can take a while for document-heavy tenders…';
     resBox.innerHTML = '';
     try {
-      const r = await post('/runs', { profile_id: profileId, tender_id: tenderId });
+      const r = liftRun(await post('/runs', { profile_id: profileId, tender_id: tenderId }));
       prog.innerHTML = 'Run finished.';
       resBox.innerHTML = renderRunResult(r);
       resBox.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -844,7 +860,7 @@ async function loadRunHistory(el, profileId) {
   box.innerHTML = '<div class="loading"><span class="spinner"></span>Loading history…</div>';
   let runs;
   try {
-    runs = asArray(await get('/runs' + (profileId ? '?profile_id=' + encodeURIComponent(profileId) : '')));
+    runs = asArray(await get('/runs' + (profileId ? '?profile_id=' + encodeURIComponent(profileId) : ''))).map(liftRun);
   } catch (e) {
     box.innerHTML = errorBox('Could not load run history: ' + e.message);
     return;
