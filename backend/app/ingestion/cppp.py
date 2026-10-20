@@ -171,6 +171,20 @@ def _parse_search_table(html: str, base_url: str) -> list[dict]:
                 continue
             texts = [_clean(td.get_text()) for td in cells]
             title = texts[c_title] if c_title is not None and c_title < len(texts) else ""
+            # The Title column on CPPP glues "Title / Ref No / Tender Id"
+            # into one cell. Prefer the title link's own text; otherwise
+            # trim the trailing /ref/tender-id chain.
+            if c_title is not None and c_title < len(cells):
+                anchor = cells[c_title].find("a")
+                if anchor is not None:
+                    a_text = _clean(anchor.get_text())
+                    if len(a_text) >= 8:
+                        title = a_text
+                title = re.sub(
+                    r"\s*/\s*\d{4,}\s*/\s*(?:19|20)\d{2}_[A-Za-z].*$", "", title
+                )
+                title = re.sub(r"\s*/\s*(?:19|20)\d{2}_[A-Za-z][\w/]*$", "", title)
+                title = title.strip()
             if not title or len(title) < 8:
                 continue
             link = tr.find("a", href=True)
