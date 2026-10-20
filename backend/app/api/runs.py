@@ -18,7 +18,7 @@ router = APIRouter(prefix="/api/runs", tags=["runs"])
 
 
 class RunCreate(BaseModel):
-    profile_id: int
+    profile_id: Optional[int] = None
     tender_id: Optional[int] = None
 
 
@@ -39,6 +39,12 @@ class RunOut(BaseModel):
 
 @router.post("", response_model=RunOut, status_code=status.HTTP_201_CREATED)
 def create_run(payload: RunCreate, db: Session = Depends(get_db)):
+    if payload.profile_id is None:
+        raise HTTPException(
+            status_code=400,
+            detail="No company profile selected. Create your company profile "
+            "first — the pipeline analyses each tender for a specific company.",
+        )
     profile = db.get(CompanyProfile, payload.profile_id)
     if profile is None:
         raise HTTPException(status_code=404, detail="Profile not found")

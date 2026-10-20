@@ -69,7 +69,7 @@ function verdictClass(v) {
 }
 
 function verdictBadge(v) {
-  const label = dash(v) === '—' ? 'UNKNOWN' : String(v).toUpperCase();
+  const label = dash(v) === '—' ? 'NOT RUN' : String(v).toUpperCase();
   return '<span class="badge ' + verdictClass(v) + '">' + esc(label) + '</span>';
 }
 
@@ -188,14 +188,17 @@ function setLoading(el, msg) {
 
 async function renderDashboard(el) {
   setLoading(el, 'Loading dashboard…');
-  const [tendersR, deadlinesR, runsR] = await Promise.allSettled([
+  const [tendersR, deadlinesR, runsR, profilesR] = await Promise.allSettled([
     get('/tenders'),
     get('/deadlines?days=7'),
     get('/runs'),
+    get('/profiles'),
   ]);
   const tenders = tendersR.status === 'fulfilled' ? asArray(tendersR.value) : [];
   const deadlines = deadlinesR.status === 'fulfilled' ? asArray(deadlinesR.value) : [];
   const runs = runsR.status === 'fulfilled' ? asArray(runsR.value) : [];
+  const profiles = profilesR.status === 'fulfilled' ? asArray(profilesR.value) : [];
+  state.profiles = profiles;
   const errors = [tendersR, deadlinesR, runsR].filter((r) => r.status === 'rejected')
     .map((r) => r.reason.message);
 
@@ -209,6 +212,18 @@ async function renderDashboard(el) {
 
   let html = '';
   if (errors.length) html += errorBox('Some dashboard data could not load: ' + errors.join('; '));
+
+  if (!profiles.length) {
+    html += '<div class="card"><h2>Start here — set up your company</h2>' +
+      '<p class="muted small">Tender Co-Pilot analyses every tender for <strong>your</strong> company: ' +
+      'match score, eligibility, EMD exemptions and deadlines all depend on your profile.</p>' +
+      '<ol class="small" style="line-height:1.9;margin:0.4rem 0 0.8rem 1.1rem">' +
+      '<li><strong>Create your company profile</strong> — name, turnover, Udyam/MSME status, experience.</li>' +
+      '<li><strong>Scan live tenders</strong> — pull the latest from the government portal (Ingest tab).</li>' +
+      '<li><strong>Run the pipeline</strong> on any tender — get a GO / CAUTION / NO-GO verdict with a bid pack.</li></ol>' +
+      '<div class="btn-row"><a class="btn small" href="#/profiles">Create your company profile →</a>' +
+      '<a class="btn small secondary" href="#/ingest">Scan live tenders</a></div></div>';
+  }
 
   html += '<div class="stats">' +
     statCard(tenders.length, 'Tenders tracked') +
@@ -431,10 +446,27 @@ async function renderTenderDetail(el, id) {
   const runBtn = el.querySelector('#detail-run');
   runBtn.addEventListener('click', async () => {
     const note = el.querySelector('#detail-run-note');
+    // Resolve which company profile to analyse for. Arriving here with no
+    // profile selected (or none created yet) must guide, not crash.
+    let pid = state.filters.profile_id ? Number(state.filters.profile_id) : null;
+    if (!pid || Number.isNaN(pid)) {
+      if (!state.profiles || !state.profiles.length) {
+        try { state.profiles = await get('/profiles'); } catch (e) { state.profiles = []; }
+      }
+      if (state.profiles && state.profiles.length) {
+        pid = state.profiles[0].id;
+        state.filters.profile_id = String(pid);
+      }
+    }
+    if (!pid) {
+      note.innerHTML = 'You need a company profile first — the pipeline matches this tender ' +
+        'against your company. <a href="#/profiles">Create your company profile →</a>';
+      return;
+    }
     runBtn.disabled = true;
     note.innerHTML = '<span class="spinner"></span>Running pipeline…';
     try {
-      const r = await post('/runs', { profile_id: state.filters.profile_id || null, tender_id: t.id });
+      const r = await post('/runs', { profile_id: pid, tender_id: t.id });
       note.innerHTML = 'Run finished: ' + verdictBadge(r.verdict) + ' score ' +
         esc(r.match_score != null ? Math.round(normScore(r.match_score)) : '—');
       setTimeout(() => navigate('#/tender/' + encodeURIComponent(t.id)), 1200);
