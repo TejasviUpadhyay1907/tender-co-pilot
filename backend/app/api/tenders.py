@@ -140,18 +140,27 @@ def list_tenders(
     profile_id: Optional[int] = None,
     verdict: Optional[str] = None,
     category: Optional[str] = None,
+    q: Optional[str] = None,
     db: Session = Depends(get_db),
 ):
-    """List tenders, optionally filtered by category.
+    """List tenders, optionally filtered by category and search text.
 
     When ``profile_id`` is given, each tender is enriched with a
     deterministic ``match_score`` (MatcherAgent) and the ``verdict`` of the
     latest pipeline run for that profile+tender (may be null when never run).
     """
-    q = db.query(Tender)
+    query = db.query(Tender)
     if category:
-        q = q.filter(Tender.category == category)
-    tenders = q.order_by(Tender.id.desc()).limit(500).all()
+        query = query.filter(Tender.category == category)
+    if q:
+        like = f"%{q.strip()}%"
+        query = query.filter(
+            Tender.title.ilike(like)
+            | Tender.organisation.ilike(like)
+            | Tender.ref_no.ilike(like)
+            | Tender.tender_id_external.ilike(like)
+        )
+    tenders = query.order_by(Tender.id.desc()).limit(500).all()
 
     if profile_id is None:
         return [TenderOut.model_validate(t).model_dump(mode="json") for t in tenders]

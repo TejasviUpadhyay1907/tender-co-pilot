@@ -6,7 +6,7 @@ PROXY=$(cat /root/.tcp-proxy)
 CREDS=$(python3 -c "from urllib.parse import urlparse; u=urlparse('$PROXY'.strip()); print(u.username+':'+u.password)")
 while true; do
   ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \
-      -o ConnectTimeout=25 -o ServerAliveInterval=30 \
+      -o ConnectTimeout=120 -o ServerAliveInterval=30 \
       -o ProxyCommand="socat STDIO PROXY:hatch-egress-proxy:%h:%p,proxyport=3128,proxyauth=${CREDS} 2>/dev/null" \
       -p 443 -R0:localhost:8000 a.pinggy.io >> /tmp/tcp-tunnel-svc.log 2>&1
   echo "ssh exited $? at $(date -u +%H:%M:%S)" >> /tmp/tcp-tunnel-svc.log

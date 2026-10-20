@@ -33,11 +33,31 @@ def _seed_if_present(db) -> None:
 
 def _seed_default_profile(db) -> None:
     """Create one demo company profile if none exists, so the pipeline
-    (which requires a profile) works out of the box on a fresh deploy."""
+    (which requires a profile) works out of the box on a fresh deploy.
+
+    Also repairs profiles whose experience_json was stored as a bare
+    list (an early seed bug): ProfileOut expects the dict shape
+    {"items": [...], "max_single_value": N} and a list makes every
+    /api/profiles read fail with a 500."""
     from app.db import CompanyProfile
 
     try:
-        if db.query(CompanyProfile).count() > 0:
+        rows = db.query(CompanyProfile).all()
+        repaired = False
+        for p in rows:
+            if isinstance(p.experience_json, list):
+                items = p.experience_json
+                values = [i.get("value") for i in items if isinstance(i, dict)]
+                values = [v for v in values if isinstance(v, (int, float))]
+                p.experience_json = {
+                    "items": items,
+                    "max_single_value": max(values) if values else None,
+                }
+                repaired = True
+        if repaired:
+            db.commit()
+            log.info("Repaired list-shaped experience_json on existing profiles")
+        if rows:
             return
         db.add(
             CompanyProfile(
@@ -49,9 +69,12 @@ def _seed_default_profile(db) -> None:
                 turnover_avg_3y=80000000,
                 local_content_pct=60,
                 certifications_json=["GST", "PAN"],
-                experience_json=[
-                    {"type": "road maintenance", "value": 45000000, "year": 2025}
-                ],
+                experience_json={
+                    "items": [
+                        {"type": "road maintenance", "value": 45000000, "year": 2025}
+                    ],
+                    "max_single_value": 45000000,
+                },
                 notes="Demo profile seeded for first-run preview",
             )
         )

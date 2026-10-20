@@ -599,11 +599,11 @@ async function renderProfiles(el) {
   } else {
     html += '<div class="table-wrap"><table><thead><tr><th>Name</th><th>Sector</th><th>Turnover (3-yr avg)</th><th>Flags</th><th></th></tr></thead><tbody>' +
       profiles.map((p) => {
-        const flags = [p.udyam_registered && 'Udyam', p.startup_recognised && 'Startup',
+        const flags = [p.udyam_registered && 'Udyam', p.dpiit_startup && 'Startup',
           p.blacklisted && 'BLACKLISTED'].filter(Boolean).join(', ');
         return '<tr><td><strong>' + esc(p.name) + '</strong></td>' +
           '<td>' + esc(dash(p.sector)) + '</td>' +
-          '<td>' + esc(inr(p.avg_turnover_3yr)) + '</td>' +
+          '<td>' + esc(inr(p.turnover_avg_3y)) + '</td>' +
           '<td class="small">' + esc(dash(flags)) + '</td>' +
           '<td style="white-space:nowrap"><button type="button" class="btn secondary small" data-edit="' + esc(p.id) + '">Edit</button> ' +
           '<button type="button" class="btn danger small" data-del="' + esc(p.id) + '">Delete</button></td></tr>';
@@ -649,11 +649,11 @@ function renderProfileForm(box, p) {
       SECTORS.map((s) => '<option value="' + s + '"' + (v('sector') === s ? ' selected' : '') + '>' + s + '</option>').join('') + '</select>') +
     fld('pf-regtype', 'Registration type', '<input type="text" id="pf-regtype" placeholder="e.g. Private Limited, Proprietorship" value="' + esc(v('registration_type')) + '">') +
     fld('pf-turnover', 'Avg 3-yr turnover (₹)',
-      '<input type="number" id="pf-turnover" min="0" step="any" placeholder="e.g. 25000000" value="' + esc(v('avg_turnover_3yr')) + '">') +
+      '<input type="number" id="pf-turnover" min="0" step="any" placeholder="e.g. 25000000" value="' + esc(v('turnover_avg_3y')) + '">') +
     fld('pf-local', 'Local content %',
       '<input type="number" id="pf-local" min="0" max="100" step="any" placeholder="e.g. 60" value="' + esc(v('local_content_pct')) + '">') +
     '<div class="field"><label>&nbsp;</label><div class="check-row"><input type="checkbox" id="pf-udyam"' + (v('udyam_registered') ? ' checked' : '') + '><label for="pf-udyam">Udyam (MSME) registered</label></div>' +
-    '<div class="check-row" style="margin-top:0.4rem"><input type="checkbox" id="pf-startup"' + (v('startup_recognised') ? ' checked' : '') + '><label for="pf-startup">DPIIT startup recognised</label></div>' +
+    '<div class="check-row" style="margin-top:0.4rem"><input type="checkbox" id="pf-startup"' + (v('dpiit_startup') ? ' checked' : '') + '><label for="pf-startup">DPIIT startup recognised</label></div>' +
     '<div class="check-row" style="margin-top:0.4rem"><input type="checkbox" id="pf-blacklisted"' + (v('blacklisted') ? ' checked' : '') + '><label for="pf-blacklisted">Blacklisted / debarred</label></div></div>' +
     fld('pf-certs', 'Certifications <span class="hint">one per line</span>',
       '<textarea id="pf-certs" placeholder="ISO 9001:2015&#10;Electrical Contractor Licence — Class A">' + esc(certs) + '</textarea>', true) +
@@ -678,9 +678,9 @@ function renderProfileForm(box, p) {
       sector: box.querySelector('#pf-sector').value,
       registration_type: box.querySelector('#pf-regtype').value.trim() || null,
       udyam_registered: box.querySelector('#pf-udyam').checked,
-      startup_recognised: box.querySelector('#pf-startup').checked,
+      dpiit_startup: box.querySelector('#pf-startup').checked,
       blacklisted: box.querySelector('#pf-blacklisted').checked,
-      avg_turnover_3yr: num('pf-turnover'),
+      turnover_avg_3y: num('pf-turnover'),
       local_content_pct: num('pf-local'),
       certifications: box.querySelector('#pf-certs').value.split('\n').map((s) => s.trim()).filter(Boolean),
       experience: parseExperience(box.querySelector('#pf-exp').value),
