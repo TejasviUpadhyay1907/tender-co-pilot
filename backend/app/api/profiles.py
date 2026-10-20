@@ -16,7 +16,7 @@ router = APIRouter(prefix="/api/profiles", tags=["profiles"])
 class ProfileBase(BaseModel):
     name: str
     sector: str = ""
-    registration_type: str = ""
+    registration_type: Optional[str] = ""
     udyam_registered: bool = False
     dpiit_startup: bool = False
     turnover_avg_3y: Optional[float] = None
@@ -61,6 +61,10 @@ def _apply_aliases(data: dict) -> dict:
       ``experience_json`` = {"items": [...], "max_single_value": N}
     """
     data = dict(data)
+    # The SPA sends null for blank text fields; storage wants "".
+    for f in ("registration_type", "sector"):
+        if data.get(f) is None:
+            data[f] = ""
     certs = data.pop("certifications", None)
     if certs is not None:
         data["certifications_json"] = certs
