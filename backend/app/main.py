@@ -28,17 +28,17 @@ def _seed_if_present(db) -> None:
         log.info("Auto-seed complete: %s", result)
     except Exception:
         log.exception("Auto-seed failed")
-    _seed_default_profile(db)
+    _repair_profiles(db)
 
 
-def _seed_default_profile(db) -> None:
-    """Create one demo company profile if none exists, so the pipeline
-    (which requires a profile) works out of the box on a fresh deploy.
-
-    Also repairs profiles whose experience_json was stored as a bare
-    list (an early seed bug): ProfileOut expects the dict shape
+def _repair_profiles(db) -> None:
+    """Repair profiles whose experience_json was stored as a bare list
+    (an early seed bug): ProfileOut expects the dict shape
     {"items": [...], "max_single_value": N} and a list makes every
-    /api/profiles read fail with a 500."""
+    /api/profiles read fail with a 500.
+
+    No demo profile is seeded: the app is used with real company
+    profiles that users create themselves."""
     from app.db import CompanyProfile
 
     try:
@@ -57,29 +57,6 @@ def _seed_default_profile(db) -> None:
         if repaired:
             db.commit()
             log.info("Repaired list-shaped experience_json on existing profiles")
-        if rows:
-            return
-        db.add(
-            CompanyProfile(
-                name="Demo Roads MSME",
-                sector="roads",
-                registration_type="MSME",
-                udyam_registered=True,
-                dpiit_startup=False,
-                turnover_avg_3y=80000000,
-                local_content_pct=60,
-                certifications_json=["GST", "PAN"],
-                experience_json={
-                    "items": [
-                        {"type": "road maintenance", "value": 45000000, "year": 2025}
-                    ],
-                    "max_single_value": 45000000,
-                },
-                notes="Demo profile seeded for first-run preview",
-            )
-        )
-        db.commit()
-        log.info("Seeded default company profile")
     except Exception:
         db.rollback()
         log.exception("Default profile seed failed")
